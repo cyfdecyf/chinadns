@@ -1,0 +1,15 @@
+[Unit]
+Description=AdguardHome China DNS config updater
+After=network.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/chinadns
+
+ExecStart=python adguardhome.py
+ExecStart=sudo systemctl restart adguardhome
+
+RemainAfterExit=false
+
+[Install]
+WantedBy=multi-user.target

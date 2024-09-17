@@ -1,0 +1,11 @@
+[Unit]
+Description=AdguardHome China DNS config weekly update
+
+[Timer]
+# Run on every Saturday.
+OnCalendar=Sat *-*-* 05:00:00
+# Trigger timer if missed because of system being powered off.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
