@@ -22,6 +22,9 @@ TRUSTED_DNS = ["tls://8.8.8.8", "tls://8.8.4.4"]
 
 EXTRA_DNS_FILE = "extra.conf"
 
+# If the length of config is less than this value, something maybe wrong.
+EXPECTED_MIN_LENGTH = 70000
+
 
 class ChinaDnsAdguardHome:
     def __init__(
@@ -59,6 +62,11 @@ class ChinaDnsAdguardHome:
     def fetch_and_process(self):
         for url in self.config_urls:
             self.fetch_and_process_one(url)
+
+        if len(self.records) < EXPECTED_MIN_LENGTH:
+            raise ValueError(
+                f"Something may be wrong, only {len(self.records)} records found, expected at least {EXPECTED_MIN_LENGTH}."
+            )
 
     def write(self, output):
         with open(output, "w") as f:
