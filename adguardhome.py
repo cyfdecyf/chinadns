@@ -7,6 +7,8 @@ Run `python adguardhome.py -h` to see all available options.
 """
 
 from pathlib import Path
+import shutil
+import tempfile
 import urllib.request
 
 
@@ -68,8 +70,14 @@ class ChinaDnsAdguardHome:
                 f"Something may be wrong, only {len(self.records)} records found, expected at least {EXPECTED_MIN_LENGTH}."
             )
 
-    def write(self, output):
-        with open(output, "w") as f:
+    def save(self, output):
+        # Write to tmp file first, then rename it to output file.
+        tmp_file = None
+        with tempfile.NamedTemporaryFile(
+            prefix=f"{output}.", delete=False, mode="w", dir="."
+        ) as f:
+            tmp_file = f.name
+
             f.write(self.trusted_dns)
             f.write("\n")
             for domain in self.records:
@@ -80,9 +88,16 @@ class ChinaDnsAdguardHome:
                 with open(extra_dns_file, "r") as exf:
                     f.write(exf.read())
 
+        # Backup if exists.
+        if Path(output).exists():
+            shutil.copy2(output, output + ".bak")
+
+        Path(tmp_file).rename(output)
+        Path(output).chmod(0o644)
+
     def run(self, output):
         self.fetch_and_process()
-        self.write(output)
+        self.save(output)
 
 
 if __name__ == "__main__":
