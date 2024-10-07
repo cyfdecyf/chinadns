@@ -36,8 +36,31 @@ class ChinaDnsAdguardHome:
         self.config_urls = args.config_urls
         self.china_dns = " ".join(args.china_dns)
         self.trusted_dns = "\n".join(args.trusted_dns)
-        self.extra_dns_file = args.extra_dns_file
+        self.extra_dns = self.load_extra_dns_conf(Path(args.extra_dns_file))
         self.records = set()
+
+    def load_extra_dns_conf(self, extra_dns_file: Path):
+        if not extra_dns_file.exists():
+            return {}
+
+        extra_dns = {}
+        with open(extra_dns_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line.startswith("[/"):
+                    print(f"invalid extra dns line, invalid start: {line}")
+                    continue
+
+                start = line.find("/]")
+                if start == -1:
+                    print(f"invalid extra dns line, no domain format end: {line}")
+                    continue
+
+                domain = line[2:start]
+                extra_dns[domain] = line
+                # print(f"loading extra dns: {domain}")
+
+        return extra_dns
 
     def fetch_and_process_one(self, url: str):
         with urllib.request.urlopen(url) as response:
@@ -59,7 +82,8 @@ class ChinaDnsAdguardHome:
                     continue
 
                 domain = line[first_slash + 1 : second_slash]
-                self.records.add(domain)
+                if domain not in self.extra_dns:
+                    self.records.add(domain)
 
     def fetch_and_process(self):
         for url in self.config_urls:
@@ -80,13 +104,12 @@ class ChinaDnsAdguardHome:
 
             f.write(self.trusted_dns)
             f.write("\n")
+
+            for _, extra_dns_line in self.extra_dns.items():
+                f.write(f"{extra_dns_line}\n")
+
             for domain in self.records:
                 f.write(f"[/{domain}/]{self.china_dns}\n")
-
-            extra_dns_file = Path(self.extra_dns_file)
-            if extra_dns_file.exists():
-                with open(extra_dns_file, "r") as exf:
-                    f.write(exf.read())
 
         # Backup if exists.
         if Path(output).exists():
